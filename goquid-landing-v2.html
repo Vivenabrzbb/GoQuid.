@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoQuid — Scan it. We read it. It's sent.</title>
+<meta name="description" content="GoQuid turns any QR code into a receipt: a friend, a bill, or a shop on the other side of the world. Scan it, we decode it, you confirm it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --bg-raised:#131311;
+    --line:#292724;
+    --line-soft:#1D1B18;
+    --orange:#FF6000;
+    --orange-dim:#8F3D00;
+    --amber:#FFB347;
+    --ink:#F3F0E8;
+    --ink-muted:#928C80;
+    --ink-faint:#524D44;
+    --paper:#EFE9DA;
+    --paper-ink:#18160F;
+    --paper-muted:#6B6354;
+    --paper-line:rgba(24,22,15,0.22);
+    --mono:'IBM Plex Mono',monospace;
+    --display:'Syne',sans-serif;
+    --sans:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-0.02em;line-height:1.06;color:var(--ink);}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+  ::selection{background:var(--orange);color:#0A0A0A;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important;}
+  }
+  a:focus-visible, button:focus-visible, input:focus-visible{outline:2px solid var(--orange);outline-offset:3px;}
+  .mono{font-family:var(--mono);}
+
+  /* ================= NAV ================= */
+  header{
+    position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  }
+  nav{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;max-width:1180px;margin:0 auto;}
+  .scroll-link{background:none;border:none;cursor:pointer;color:inherit;font-family:inherit;padding:0;}
+  .logo{font-family:var(--display);font-weight:800;font-size:21px;}
+  .logo .dot{color:var(--orange);}
+  .nav-links{display:flex;gap:34px;align-items:center;}
+  .nav-links button{font-size:14px;color:var(--ink-muted);transition:color .2s;font-family:var(--mono);}
+  .nav-links button:hover{color:var(--ink);}
+  .ticket-no{font-family:var(--mono);font-size:12px;color:var(--ink-faint);}
+  .nav-cta{background:var(--orange);color:#0A0A0A;padding:10px 20px;font-weight:700;font-size:13px;font-family:var(--mono);transition:background .2s;border:1px solid var(--orange);cursor:pointer;}
+  .nav-cta:hover{background:transparent;color:var(--orange);}
+  .nav-right{display:flex;align-items:center;gap:22px;}
+
+  /* ================= HERO ================= */
+  .hero{position:relative;padding:96px 0 60px;overflow:hidden;}
+  .hero-scanfield{
+    position:absolute;inset:0;pointer-events:none;opacity:0.5;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size:38px 38px;
+    mask-image:radial-gradient(ellipse 70% 60% at 50% 20%, black 10%, transparent 75%);
+  }
+  .hero-laser{
+    position:absolute;left:0;right:0;height:1px;
+    background:linear-gradient(90deg, transparent, var(--orange) 20%, var(--orange) 80%, transparent);
+    box-shadow:0 0 16px 1px rgba(255,96,0,0.5);
+    animation:hsweep 5s ease-in-out infinite;
+  }
+  @keyframes hsweep{0%,100%{top:6%;}50%{top:46%;}}
+  .hero-inner{position:relative;z-index:2;text-align:center;}
+  .hero-kicker{
+    display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);
+    font-size:12.5px;color:var(--orange);border:1px solid var(--orange-dim);
+    padding:7px 16px;margin-bottom:34px;letter-spacing:0.02em;
+  }
+  .hero-kicker::before{content:"";width:6px;height:6px;background:var(--orange);animation:blink 1.6s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0.15;}}
+  h1.hero-title{font-size:clamp(38px,6.4vw,84px);max-width:960px;margin:0 auto 26px;}
+  h1.hero-title .decode-line{display:block;}
+  h1.hero-title .accent{color:var(--orange);}
+  .hero-sub{font-size:18px;color:var(--ink-muted);max-width:520px;margin:0 auto 40px;}
+  .hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:64px;}
+  .btn-primary{
+    background:var(--orange);color:#0A0A0A;padding:15px 30px;font-weight:700;font-size:14.5px;
+    font-family:var(--mono);display:inline-flex;align-items:center;gap:10px;
+    transition:transform .2s, background .2s;border:1px solid var(--orange);cursor:pointer;
+  }
+  .btn-primary:hover{background:#FF7A26;transform:translateY(-1px);}
+  .btn-secondary{
+    padding:15px 30px;font-weight:700;font-size:14.5px;font-family:var(--mono);
+    border:1px solid var(--line);color:var(--ink);transition:border-color .2s;
+    background:transparent;cursor:pointer;
+  }
+  .btn-secondary:hover{border-color:var(--orange-dim);}
+
+  /* ================= RECEIPT ================= */
+  .receipt-stage{display:flex;flex-direction:column;align-items:center;position:relative;z-index:2;}
+  .mode-tabs{display:flex;gap:0;margin-bottom:-1px;position:relative;z-index:3;}
+  .mode-tab{
+    font-family:var(--mono);font-size:12.5px;font-weight:600;padding:10px 20px;
+    background:var(--bg-raised);border:1px solid var(--line);border-bottom:none;
+    color:var(--ink-faint);cursor:pointer;transition:color .2s, background .2s;
+  }
+  .mode-tab.active{color:var(--paper-ink);background:var(--paper);border-color:var(--paper);}
+  .receipt{
+    width:320px;background:var(--paper);color:var(--paper-ink);position:relative;
+    padding:30px 26px 26px;font-family:var(--mono);
+  }
+  .receipt::before,.receipt::after{
+    content:"";position:absolute;left:0;right:0;height:11px;
+    background:radial-gradient(circle at 11px 5.5px, var(--bg) 6px, transparent 6.5px) repeat-x;
+    background-size:22px 11px;
+  }
+  .receipt::before{top:-1px;}
+  .receipt::after{bottom:-1px;transform:scaleY(-1);}
+  .receipt-brand{text-align:center;font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:0.04em;margin-bottom:4px;}
+  .receipt-sub{text-align:center;font-size:11px;color:var(--paper-muted);letter-spacing:0.08em;margin-bottom:18px;}
+  .receipt-rule{border-top:1px dashed var(--paper-line);margin:14px 0;}
+  .receipt-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:4px 0;}
+  .receipt-row .k{color:var(--paper-muted);}
+  .receipt-row .v{font-weight:600;text-align:right;}
+  .receipt-amount{text-align:center;margin:18px 0 14px;}
+  .receipt-amount .amt{font-family:var(--display);font-size:34px;font-weight:800;}
+  .receipt-amount .amt-label{font-size:10.5px;color:var(--paper-muted);letter-spacing:0.12em;margin-bottom:2px;}
+  .receipt-status{
+    text-align:center;font-size:11.5px;font-weight:600;letter-spacing:0.06em;
+    color:var(--paper-ink);border:1px solid var(--paper-ink);padding:6px;margin:14px 0 16px;
+  }
+  .receipt-barcode{
+    height:30px;margin-top:6px;
+    background-image:repeating-linear-gradient(90deg,var(--paper-ink) 0 2px,transparent 2px 4px,var(--paper-ink) 4px 5px,transparent 5px 8px,var(--paper-ink) 8px 11px,transparent 11px 13px,var(--paper-ink) 13px 14px,transparent 14px 18px);
+  }
+  .receipt-scan-no{text-align:center;font-size:10px;color:var(--paper-muted);margin-top:8px;letter-spacing:0.06em;}
+
+  /* ================= SECTION GENERIC ================= */
+  section{padding:104px 0;scroll-margin-top:76px;}
+  #ways, #how-it-works, #worldwide, #security, #cta{scroll-margin-top:76px;}
+  .section-head{max-width:640px;margin-bottom:56px;}
+  .section-kicker{font-family:var(--mono);font-size:12px;color:var(--orange);letter-spacing:0.06em;margin-bottom:16px;display:block;}
+  .section-title{font-size:clamp(28px,3.4vw,42px);margin-bottom:16px;}
+  .section-sub{font-size:16.5px;color:var(--ink-muted);}
+
+  /* ================= WAYS (itemized receipt list) ================= */
+  .itemized{border-top:1px solid var(--line);}
+  .item-row{
+    display:grid;grid-template-columns:210px 1fr 150px;gap:24px;align-items:start;
+    padding:34px 0;border-bottom:1px solid var(--line);
+  }
+  .item-tag{font-family:var(--mono);font-size:12px;color:var(--orange);letter-spacing:0.05em;}
+  .item-name{font-family:var(--display);font-size:23px;font-weight:700;margin-top:6px;}
+  .item-desc{color:var(--ink-muted);font-size:15px;max-width:480px;}
+  .item-fee{
+    text-align:right;font-family:var(--mono);font-size:13px;color:var(--ink-faint);
+    align-self:center;justify-self:end;
+  }
+  .item-fee b{color:var(--amber);display:block;font-size:15px;margin-bottom:2px;font-family:var(--mono);}
+
+  /* ================= HOW IT WORKS (live walkthrough) ================= */
+  .how{background:var(--bg-raised);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .how-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+  .replay-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;font-size:13px;}
+  .flow-dot{width:7px;height:7px;border-radius:50%;background:var(--orange);display:inline-block;animation:blink 1.6s steps(2) infinite;}
+
+  .flow-stage{display:flex;flex-direction:column;align-items:center;}
+  .flow-phone{width:300px;background:var(--bg-raised);border:1px solid var(--line);border-radius:30px;padding:12px;}
+  .flow-phone-screen{
+    background:#0D0D0D;border-radius:20px;min-height:440px;padding:22px 20px;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .fs-topbar{font-family:var(--mono);font-size:11px;letter-spacing:0.1em;color:var(--ink-faint);margin-bottom:22px;}
+  .fs-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+  .fs-scan-btn{
+    width:84px;height:84px;border-radius:50%;border:2px solid var(--orange);
+    display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--orange);position:relative;
+  }
+  .fs-scan-btn::after{
+    content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid var(--orange-dim);
+    animation:pulseRing 1.8s ease-out infinite;
+  }
+  @keyframes pulseRing{0%{transform:scale(0.9);opacity:0.8;}100%{transform:scale(1.35);opacity:0;}}
+  .fs-hint{font-family:var(--mono);font-size:12px;letter-spacing:0.06em;color:var(--ink-muted);}
+
+  .fs-scan-frame{
+    flex:1;border:1px solid var(--line);border-radius:14px;position:relative;
+    overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  }
+  .fs-corner{position:absolute;width:20px;height:20px;border-color:var(--orange);}
+  .fs-corner.tl{top:10px;left:10px;border-top:2px solid;border-left:2px solid;}
+  .fs-corner.tr{top:10px;right:10px;border-top:2px solid;border-right:2px solid;}
+  .fs-corner.bl{bottom:10px;left:10px;border-bottom:2px solid;border-left:2px solid;}
+  .fs-corner.br{bottom:10px;right:10px;border-bottom:2px solid;border-right:2px solid;}
+  .fs-laser{
+    position:absolute;left:8px;right:8px;height:2px;background:var(--orange);
+    box-shadow:0 0 10px 1px rgba(255,96,0,0.6);animation:msweep 1.4s ease-in-out infinite;
+  }
+  @keyframes msweep{0%,100%{top:10%;}50%{top:82%;}}
+  .fs-barcode{
+    width:72%;height:44px;
+    background-image:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 7px,var(--ink) 7px 10px,transparent 10px 12px,var(--ink) 12px 13px,transparent 13px 17px);
+  }
+  .fs-scan-label{
+    position:absolute;bottom:10px;left:0;right:0;text-align:center;
+    font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:0.05em;
+  }
+
+  .fs-detail-card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .fs-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;padding:5px 0;color:var(--ink-muted);}
+  .fs-row span:last-child{color:var(--ink);font-weight:600;}
+  .fs-amount-input{display:flex;align-items:baseline;justify-content:center;gap:4px;font-family:var(--display);font-size:36px;font-weight:800;padding:14px 0 2px;}
+  .fs-amount-input .cur{color:var(--ink-muted);font-size:20px;}
+  .fs-cursor{animation:blink 1s steps(2) infinite;color:var(--orange);}
+  .fs-pay-btn{
+    background:var(--orange);color:#0A0A0A;text-align:center;padding:13px;border-radius:10px;
+    font-weight:700;font-family:var(--mono);font-size:13px;transition:transform .18s ease, background .18s ease;
+    margin-top:auto;
+  }
+  .fs-pay-btn.pressed{transform:scale(0.95);background:#FF7A26;}
+
+  .fs-bank-list{display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center;}
+  .fs-bank{
+    border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-family:var(--mono);
+    font-size:13px;color:var(--ink-muted);display:flex;justify-content:space-between;align-items:center;
+    transition:border-color .25s, color .25s, background .25s;
+  }
+  .fs-bank.selected{border-color:var(--orange);color:var(--ink);background:rgba(255,96,0,0.08);}
+  .fs-bank .fs-check-ic{color:var(--orange);opacity:0;transition:opacity .25s;}
+  .fs-bank.selected .fs-check-ic{opacity:1;}
+
+  .fs-bio-ring{
+    width:92px;height:92px;border-radius:50%;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--ink-muted);
+    transition:border-color .3s, color .3s;position:relative;
+  }
+  .fs-bio-ring.verifying::after{
+    content:"";position:absolute;inset:-6px;border-radius:50%;
+    border:2px solid var(--orange);border-top-color:transparent;animation:fsSpin 0.9s linear infinite;
+  }
+  @keyframes fsSpin{to{transform:rotate(360deg);}}
+  .fs-bio-ring.verified{border-color:var(--orange);color:var(--orange);}
+
+  .fs-check{
+    width:68px;height:68px;border-radius:50%;background:var(--orange);color:#0A0A0A;
+    display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;
+    transform:scale(0);animation:popIn .4s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes popIn{to{transform:scale(1);}}
+  .fs-success-title{font-family:var(--display);font-weight:800;font-size:18px;margin-top:16px;letter-spacing:0.02em;}
+  .fs-success-sub{font-family:var(--mono);font-size:12px;color:var(--ink-muted);margin-top:6px;}
+
+  .flow-caption{text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink-muted);margin-top:22px;min-height:20px;}
+  .flow-dots{display:flex;justify-content:center;gap:8px;margin-top:14px;}
+  .flow-dot-btn{width:7px;height:7px;border-radius:50%;background:var(--line);border:none;cursor:pointer;padding:0;transition:background .25s, transform .25s;}
+  .flow-dot-btn.active{background:var(--orange);transform:scale(1.3);}
+
+  @media (max-width:560px){
+    .flow-phone{width:100%;max-width:300px;}
+  }
+
+  /* ================= WORLDWIDE ================= */
+  .board{
+    background:var(--bg-raised);border:1px solid var(--line);padding:2px 0;overflow:hidden;margin-bottom:36px;
+  }
+  .board-track{display:flex;width:max-content;animation:ticker 24s linear infinite;font-family:var(--mono);}
+  .rates-stamp{
+    font-family:var(--mono);font-size:11px;letter-spacing:0.08em;color:var(--ink-faint);
+    margin:12px 0 36px;display:flex;align-items:center;gap:8px;
+  }
+  .rates-stamp.is-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--orange);animation:blink 1.6s steps(2) infinite;}
+  .board-item{display:flex;align-items:center;gap:12px;padding:14px 24px;white-space:nowrap;border-right:1px solid var(--line);font-size:13.5px;}
+  .board-item .pair{color:var(--ink-faint);}
+  .board-item .val{font-weight:600;color:var(--amber);}
+  @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .world-layout{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:start;}
+  .world-copy p{color:var(--ink-muted);font-size:16px;margin-bottom:16px;max-width:480px;}
+  .stamp-list{margin-top:26px;display:flex;flex-direction:column;gap:14px;}
+  .stamp{display:flex;gap:12px;font-size:14.5px;color:var(--ink-muted);}
+  .stamp b{color:var(--ink);font-family:var(--mono);font-size:13px;border:1px solid var(--orange-dim);color:var(--orange);padding:2px 8px;white-space:nowrap;height:fit-content;}
+  .waypoints{border:1px solid var(--line);}
+  .waypoint{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);}
+  .waypoint:last-child{border-bottom:none;}
+  .wp-place{display:flex;align-items:center;gap:12px;font-size:14.5px;}
+  .flag{font-size:20px;}
+  .wp-rate{font-family:var(--mono);font-size:12.5px;color:var(--ink-faint);}
+
+  /* ================= SECURITY (fine print) ================= */
+  .fineprint-box{border:1px solid var(--line);padding:38px 40px;}
+  .fineprint-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px 48px;}
+  .fp-row{display:flex;gap:16px;padding-bottom:22px;border-bottom:1px dashed var(--line);}
+  .fp-row:nth-last-child(-n+2){border-bottom:none;padding-bottom:0;}
+  .fp-mark{font-family:var(--mono);font-size:12px;color:var(--orange);flex-shrink:0;padding-top:2px;}
+  .fp-row h3{font-size:15.5px;font-weight:700;margin-bottom:5px;font-family:var(--sans);}
+  .fp-row p{font-size:13.5px;color:var(--ink-muted);}
+
+  /* ================= CTA ================= */
+  .cta-section{border-top:1px solid var(--line);}
+  .cta-layout{display:flex;justify-content:center;}
+  .print-card{
+    width:100%;max-width:440px;background:var(--paper);color:var(--paper-ink);
+    position:relative;padding:44px 38px 34px;text-align:center;
+  }
+  .print-card::before{
+    content:"";position:absolute;left:0;right:0;top:-1px;height:11px;
+    background:radial-gradient(circle at 11px 5.5px, var(--bg) 6px, transparent 6.5px) repeat-x;
+    background-size:22px 11px;
+  }
+  .print-card h2{color:var(--paper-ink);font-size:clamp(24px,3vw,32px);margin-bottom:14px;}
+  .print-card p{font-size:14.5px;color:var(--paper-muted);max-width:340px;margin:0 auto 30px;}
+  .cta-form{display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto;}
+  .cta-form input{
+    background:transparent;border:none;border-bottom:1px dashed var(--paper-line);
+    padding:12px 4px;color:var(--paper-ink);font-size:15px;font-family:var(--mono);text-align:center;
+  }
+  .cta-form input::placeholder{color:var(--paper-muted);}
+  .cta-form .btn-primary{justify-content:center;margin-top:10px;}
+  .form-msg{font-size:13px;margin-top:16px;color:var(--orange-dim);font-weight:700;display:none;font-family:var(--mono);}
+  .print-barcode{
+    height:26px;margin-top:28px;
+    background-image:repeating-linear-gradient(90deg,var(--paper-ink) 0 2px,transparent 2px 4px,var(--paper-ink) 4px 5px,transparent 5px 8px,var(--paper-ink) 8px 11px,transparent 11px 13px,var(--paper-ink) 13px 14px,transparent 14px 18px);
+  }
+
+  /* ================= FOOTER ================= */
+  footer{padding:48px 0 36px;border-top:1px solid var(--line);}
+  .footer-grid{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:28px;}
+  .footer-links{display:flex;gap:28px;flex-wrap:wrap;}
+  .footer-links button{font-size:13.5px;color:var(--ink-muted);font-family:var(--mono);transition:color .2s;}
+  .footer-links button:hover{color:var(--ink);}
+  .footer-bottom{
+    margin-top:36px;padding-top:20px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-size:12px;color:var(--ink-faint);font-family:var(--mono);
+  }
+
+  @media (max-width:920px){
+    .world-layout{grid-template-columns:1fr;}
+    .item-row{grid-template-columns:1fr;gap:10px;}
+    .item-fee{text-align:left;justify-self:start;}
+    .fineprint-grid{grid-template-columns:1fr;}
+    .nav-links{display:none;}
+  }
+  @media (max-width:560px){
+    .wrap{padding:0 20px;}
+    .hero{padding:64px 0 40px;}
+    .receipt{width:100%;max-width:320px;}
+    .fineprint-box{padding:28px 22px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <button type="button" class="logo scroll-link" data-target="top">Go<span class="dot">Quid</span></button>
+    <div class="nav-links">
+      <button type="button" class="scroll-link" data-target="ways">Ways to pay</button>
+      <button type="button" class="scroll-link" data-target="how-it-works">How it works</button>
+      <button type="button" class="scroll-link" data-target="worldwide">Worldwide</button>
+      <button type="button" class="scroll-link" data-target="security">Security</button>
+    </div>
+    <div class="nav-right">
+      <span class="ticket-no">NO. 0042/UK</span>
+      <button type="button" class="nav-cta scroll-link" data-target="cta">GET ACCESS</button>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="hero-scanfield" aria-hidden="true"><div class="hero-laser"></div></div>
+    <div class="wrap hero-inner">
+      <div class="hero-kicker">LAUNCHING ACROSS THE UK</div>
+      <h1 class="hero-title">
+        <span class="decode-line" data-final="SCAN IT.">SCAN IT.</span>
+        <span class="decode-line" data-final="WE READ IT.">WE READ IT.</span>
+        <span class="decode-line accent" data-final="IT'S SENT.">IT'S SENT.</span>
+      </h1>
+      <p class="hero-sub">A friend, a bill, or a shop on the other side of the world — GoQuid decodes any QR the moment you scan it, and hands you a receipt before you've even paid.</p>
+      <div class="hero-actions">
+        <button type="button" class="btn-primary scroll-link" data-target="cta">GET EARLY ACCESS →</button>
+        <button type="button" class="btn-secondary scroll-link" data-target="how-it-works" data-play-flow="true">SEE HOW IT WORKS</button>
+      </div>
+
+      <div class="receipt-stage">
+        <div class="mode-tabs" role="tablist" aria-label="Payment type">
+          <button class="mode-tab active" data-mode="person" role="tab" aria-selected="true">PERSON</button>
+          <button class="mode-tab" data-mode="bill" role="tab" aria-selected="false">BILL</button>
+          <button class="mode-tab" data-mode="world" role="tab" aria-selected="false">WORLD</button>
+        </div>
+        <div class="receipt" id="receipt">
+          <div class="receipt-brand">GOQUID</div>
+          <div class="receipt-sub">SCAN RECEIPT</div>
+          <div class="receipt-rule"></div>
+          <div class="receipt-row"><span class="k">TO</span><span class="v" id="rTo">Alex Turner</span></div>
+          <div class="receipt-row"><span class="k">FOR</span><span class="v" id="rFor">Friday dinner split</span></div>
+          <div class="receipt-row"><span class="k">FEE</span><span class="v" id="rFee">£0.00</span></div>
+          <div class="receipt-amount">
+            <div class="amt-label">AMOUNT</div>
+            <div class="amt" id="rAmt">£24.00</div>
+          </div>
+          <div class="receipt-status" id="rStatus">READY TO CONFIRM</div>
+          <div class="receipt-barcode"></div>
+          <div class="receipt-scan-no" id="rNo">SCAN #849213-A</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ways">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-kicker">// THREE THINGS YOU SCAN</span>
+        <h2 class="section-title">One camera. Every payment you make.</h2>
+        <p class="section-sub">GoQuid doesn't ask what kind of payment this is — it looks at the code and works it out.</p>
+      </div>
+      <div class="itemized">
+        <div class="item-row">
+          <div><div class="item-tag">01 / PEOPLE</div><div class="item-name">Pay a person</div></div>
+          <div class="item-desc">Scan a friend's GoQuid code and it moves bank to bank in seconds. Splitting rent, paying someone back, sending a tenner for their birthday.</div>
+          <div class="item-fee"><b>£0.00</b>fee, always</div>
+        </div>
+        <div class="item-row">
+          <div><div class="item-tag">02 / BILLS</div><div class="item-name">Pay a bill</div></div>
+          <div class="item-desc">Point your camera at your council tax letter, gas bill, or electricity statement. GoQuid reads the reference and amount — you just check it.</div>
+          <div class="item-fee"><b>Council · Gas</b>Electric</div>
+        </div>
+        <div class="item-row">
+          <div><div class="item-tag">03 / WORLD</div><div class="item-name">Pay abroad</div></div>
+          <div class="item-desc">Scan a shop or invoice code anywhere on earth. GoQuid recognises the country, quotes the live rate, and pays out in local currency immediately.</div>
+          <div class="item-fee"><b>190+</b>countries</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how" id="how-it-works">
+    <div class="wrap">
+      <div class="section-head how-head">
+        <div>
+          <span class="section-kicker">// WATCH IT HAPPEN</span>
+          <h2 class="section-title">Paying a gas bill, start to finish.</h2>
+          <p class="section-sub">Every GoQuid payment follows this same flow — bill, person, or abroad. Watch it play out.</p>
+        </div>
+        <button type="button" class="btn-secondary replay-btn" id="replayFlow">
+          <i class="flow-dot" id="flowDot" aria-hidden="true"></i> REPLAY
+        </button>
+      </div>
+
+      <div class="flow-stage">
+        <div class="flow-phone">
+          <div class="flow-phone-screen" id="flowScreen"></div>
+        </div>
+        <div class="flow-caption" id="flowCaption">Open GoQuid, tap Scan.</div>
+        <div class="flow-dots" id="flowDots"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="worldwide">
+    <div class="wrap">
+      <div class="board">
+        <div class="board-track" id="boardTrack"></div>
+      </div>
+      <div class="rates-stamp" id="ratesStamp">FETCHING LIVE RATES…</div>
+      <div class="world-layout">
+        <div class="world-copy">
+          <span class="section-kicker">// RATES, LIVE</span>
+          <h2 class="section-title">Scan it, and GoQuid already knows where it's going.</h2>
+          <p>Every country's payment codes look a little different. GoQuid recognises the format the instant you scan — the bank details, the currency, the country — and shows today's rate before you send a penny.</p>
+          <div class="stamp-list">
+            <div class="stamp"><b>LIVE</b>Mid-market rates shown before you confirm, not buried after.</div>
+            <div class="stamp"><b>CLEAR</b>No hidden markup folded into the exchange rate.</div>
+            <div class="stamp"><b>FAST</b>Lands the same day, in the recipient's local currency.</div>
+          </div>
+        </div>
+        <div class="waypoints">
+          <div class="waypoint"><div class="wp-place"><span class="flag">🇵🇹</span>Café, Lisbon</div><div class="wp-rate" id="wpLisbon">£1 = €1.17</div></div>
+          <div class="waypoint"><div class="wp-place"><span class="flag">🇯🇵</span>Ryokan, Kyoto</div><div class="wp-rate" id="wpKyoto">£1 = ¥190.4</div></div>
+          <div class="waypoint"><div class="wp-place"><span class="flag">🇳🇬</span>Market, Lagos</div><div class="wp-rate" id="wpLagos">£1 = ₦2,041</div></div>
+          <div class="waypoint"><div class="wp-place"><span class="flag">🇺🇸</span>Diner, LA</div><div class="wp-rate" id="wpLA">£1 = $1.29</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="security">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-kicker">// TERMS, UP FRONT</span>
+        <h2 class="section-title">Your bank moves the money. We never hold it.</h2>
+        <p class="section-sub">GoQuid connects through Open Banking — the same regulated system your bank already uses for third-party access.</p>
+      </div>
+      <div class="fineprint-box">
+        <div class="fineprint-grid">
+          <div class="fp-row"><span class="fp-mark">§1</span><div><h3>Open Banking only</h3><p>Payments run bank to bank through regulated APIs — not through us.</p></div></div>
+          <div class="fp-row"><span class="fp-mark">§2</span><div><h3>Nothing stored</h3><p>No card numbers, no long-term credentials kept on file.</p></div></div>
+          <div class="fp-row"><span class="fp-mark">§3</span><div><h3>You approve every send</h3><p>Every payment is confirmed in your own banking app before it moves.</p></div></div>
+          <div class="fp-row"><span class="fp-mark">§4</span><div><h3>Built for the sandbox</h3><p>Developed working toward the UK's FCA regulatory sandbox from day one.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section" id="cta">
+    <div class="wrap cta-layout">
+      <div class="print-card">
+        <h2>Print your invite.</h2>
+        <p>We're launching across the UK. Leave your email and yours prints the moment it's ready.</p>
+        <form class="cta-form" id="waitlistForm">
+          <input type="email" placeholder="you@email.com" id="emailInput" required aria-label="Email address">
+          <button type="submit" class="btn-primary">GET EARLY ACCESS</button>
+        </form>
+        <div class="form-msg" id="formMsg">RECEIPT ISSUED — WE'LL BE IN TOUCH.</div>
+        <div class="print-barcode"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <button type="button" class="logo scroll-link" data-target="top">Go<span class="dot">Quid</span></button>
+      <div class="footer-links">
+        <button type="button" class="scroll-link" data-target="ways">Ways to pay</button>
+        <button type="button" class="scroll-link" data-target="how-it-works">How it works</button>
+        <button type="button" class="scroll-link" data-target="worldwide">Worldwide</button>
+        <button type="button" class="scroll-link" data-target="security">Security</button>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 GOQUID · SCAN AND PAY, ANYWHERE</span>
+      <span>UNITED KINGDOM</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const modes = {
+    person: { to:"Alex Turner", forr:"Friday dinner split", fee:"£0.00", amt:"£24.00", status:"READY TO CONFIRM", no:"SCAN #849213-A" },
+    bill:   { to:"Local Council Tax", forr:"Council tax · Ref 7042 991 3", fee:"£0.00", amt:"£148.50", status:"READY TO CONFIRM", no:"SCAN #117740-B" },
+    world:  { to:"Café Nata, Lisbon", forr:"Live rate £1 = €1.17", fee:"£0.20", amt:"€18.60", status:"RATE LOCKED · 90 SEC", no:"SCAN #663092-W" }
+  };
+  const els = {
+    to:document.getElementById("rTo"), forr:document.getElementById("rFor"),
+    fee:document.getElementById("rFee"), amt:document.getElementById("rAmt"),
+    status:document.getElementById("rStatus"), no:document.getElementById("rNo"),
+    receipt:document.getElementById("receipt")
+  };
+  const tabs = document.querySelectorAll(".mode-tab");
+  let order = ["person","bill","world"], idx = 0, autoTimer;
+
+  function setMode(mode){
+    const m = modes[mode];
+    els.receipt.style.animation = "none"; void els.receipt.offsetWidth; els.receipt.style.animation = "fadeIn .4s ease";
+    els.to.textContent = m.to; els.forr.textContent = m.forr; els.fee.textContent = m.fee;
+    els.amt.textContent = m.amt; els.status.textContent = m.status; els.no.textContent = m.no;
+    tabs.forEach(t=>{
+      const active = t.dataset.mode === mode;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true":"false");
+    });
+    idx = order.indexOf(mode);
+  }
+  function restartAuto(){
+    clearInterval(autoTimer);
+    autoTimer = setInterval(()=>{ idx=(idx+1)%order.length; setMode(order[idx]); }, 4500);
+  }
+  tabs.forEach(tab=>tab.addEventListener("click", ()=>{ setMode(tab.dataset.mode); restartAuto(); }));
+  setMode("person"); restartAuto();
+
+  const style = document.createElement("style");
+  style.textContent = "@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}";
+  document.head.appendChild(style);
+
+  let rates = [
+    {pair:"GBP/EUR",val:"1.17"},{pair:"GBP/USD",val:"1.29"},{pair:"GBP/JPY",val:"190.4"},
+    {pair:"GBP/NGN",val:"2,041"},{pair:"GBP/INR",val:"108.6"},{pair:"GBP/AUD",val:"1.94"},{pair:"GBP/CAD",val:"1.76"}
+  ];
+  const track = document.getElementById("boardTrack");
+  const buildRates = () => rates.map(r=>`<div class="board-item"><span class="pair">${r.pair}</span><span class="val">${r.val}</span></div>`).join("");
+  track.innerHTML = buildRates() + buildRates();
+
+  function formatRate(n){
+    return n >= 100 ? Math.round(n).toLocaleString("en-GB") : n.toFixed(2);
+  }
+
+  const EXCHANGE_RATE_API_KEY = "ce9ab2a7c24a8377f10bbd65";
+
+  async function fetchRates(){
+    // Primary: paid v6 endpoint (hourly updates on the Pro tier)
+    const res = await fetch(`https://v6.exchangerate-api.com/v6/${EXCHANGE_RATE_API_KEY}/latest/GBP`);
+    if(!res.ok) throw new Error("network");
+    const data = await res.json();
+    if(data.result !== "success" || !data.conversion_rates) throw new Error("payload");
+    return { rates: data.conversion_rates, updatedUtc: data.time_last_update_utc };
+  }
+
+  async function fetchRatesFallback(){
+    // Fallback: free open endpoint, used only if the key above fails or quota runs out
+    const res = await fetch("https://open.er-api.com/v6/latest/GBP");
+    if(!res.ok) throw new Error("network");
+    const data = await res.json();
+    if(data.result !== "success" || !data.rates) throw new Error("payload");
+    return { rates: data.rates, updatedUtc: data.time_last_update_utc };
+  }
+
+  async function loadLiveRates(){
+    const stamp = document.getElementById("ratesStamp");
+    let result;
+    try{
+      result = await fetchRates();
+    }catch(primaryErr){
+      try{ result = await fetchRatesFallback(); }
+      catch(fallbackErr){ result = null; }
+    }
+    if(!result){
+      if(stamp){
+        stamp.textContent = "SAMPLE RATES · LIVE FEED UNAVAILABLE RIGHT NOW";
+        stamp.classList.remove("is-live");
+      }
+      return;
+    }
+    const r = result.rates;
+    const wanted = [
+      { code:"EUR", pair:"GBP/EUR" }, { code:"USD", pair:"GBP/USD" },
+      { code:"JPY", pair:"GBP/JPY" }, { code:"NGN", pair:"GBP/NGN" },
+      { code:"INR", pair:"GBP/INR" }, { code:"AUD", pair:"GBP/AUD" },
+      { code:"CAD", pair:"GBP/CAD" }
+    ];
+    const fresh = wanted.filter(w => typeof r[w.code] === "number")
+                         .map(w => ({ pair:w.pair, val: formatRate(r[w.code]) }));
+    if(fresh.length){
+      rates = fresh;
+      track.innerHTML = buildRates() + buildRates();
+    }
+    const setWp = (id, code, symbol) => {
+      const el = document.getElementById(id);
+      if(el && typeof r[code] === "number") el.textContent = `£1 = ${symbol}${formatRate(r[code])}`;
+    };
+    setWp("wpLisbon","EUR","€"); setWp("wpKyoto","JPY","¥");
+    setWp("wpLagos","NGN","₦"); setWp("wpLA","USD","$");
+
+    if(stamp){
+      const d = new Date(result.updatedUtc || Date.now());
+      stamp.textContent = "LIVE · UPDATED " + d.toLocaleDateString("en-GB",{ day:"2-digit", month:"short" });
+      stamp.classList.add("is-live");
+    }
+  }
+  loadLiveRates();
+
+  const form = document.getElementById("waitlistForm");
+  const msg = document.getElementById("formMsg");
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const email = document.getElementById("emailInput").value.trim();
+    if(!email || !email.includes("@")){
+      msg.textContent = "ENTER A VALID EMAIL ADDRESS.";
+      msg.style.display = "block";
+      return;
+    }
+    msg.textContent = "RECEIPT ISSUED — WE'LL BE IN TOUCH.";
+    msg.style.display = "block";
+    form.reset();
+  });
+
+  function scramble(el){
+    const finalText = el.dataset.final;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&";
+    const orig = finalText.split("");
+    let frame = 0;
+    const totalFrames = orig.length + 14;
+    function step(){
+      let out = "";
+      for(let i=0;i<orig.length;i++){
+        if(orig[i]===" "){ out+=" "; continue; }
+        const progress = frame - i*1.4;
+        if(progress > 10) out += orig[i];
+        else if(progress > 0) out += chars[Math.floor(Math.random()*chars.length)];
+        else out += "\u00A0";
+      }
+      el.textContent = out;
+      frame++;
+      if(frame < totalFrames) setTimeout(()=>requestAnimationFrame(step), 26);
+      else el.textContent = finalText;
+    }
+    step();
+  }
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll(".decode-line").forEach((el,i)=>{
+    if(reduceMotion){ el.textContent = el.dataset.final; return; }
+    setTimeout(()=>scramble(el), i*260);
+  });
+
+  document.querySelectorAll(".scroll-link").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const target = document.getElementById(btn.dataset.target);
+      if(target) target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      if(btn.dataset.playFlow === "true") setTimeout(playFlow, reduceMotion ? 0 : 500);
+    });
+  });
+
+  const flowScreen = document.getElementById("flowScreen");
+  const flowCaption = document.getElementById("flowCaption");
+  const flowDotsWrap = document.getElementById("flowDots");
+  let flowTimer = null;
+  let flowRunning = false;
+  let flowIndex = 0;
+
+  const flowScreens = [
+    {
+      caption: "Open GoQuid, tap Scan.",
+      duration: 1300,
+      render: () => `<div class="fs-topbar">GOQUID</div><div class="fs-center"><div class="fs-scan-btn">▣</div><div class="fs-hint">TAP TO SCAN</div></div>`
+    },
+    {
+      caption: "Point the camera at the barcode on your gas bill.",
+      duration: 1900,
+      render: () => `
+        <div class="fs-topbar">SCANNING</div>
+        <div class="fs-scan-frame">
+          <div class="fs-corner tl"></div><div class="fs-corner tr"></div>
+          <div class="fs-corner bl"></div><div class="fs-corner br"></div>
+          <div class="fs-laser"></div>
+          <div class="fs-barcode"></div>
+          <div class="fs-scan-label">BRITISH GAS · READING…</div>
+        </div>`
+    },
+    {
+      caption: "Enter the amount, or use what GoQuid read off the bill.",
+      duration: 2200,
+      onEnter: () => animateAmount(),
+      render: () => `
+        <div class="fs-topbar">CONFIRM BILL</div>
+        <div class="fs-detail-card">
+          <div class="fs-row"><span>TO</span><span>British Gas</span></div>
+          <div class="fs-row"><span>REF</span><span>GB-88213-40</span></div>
+          <div class="fs-amount-input"><span class="cur">£</span><span id="fsAmtVal">0.00</span><span class="fs-cursor">|</span></div>
+        </div>
+        <div class="fs-pay-btn" id="fsPayBtn">PAY £84.20</div>`
+    },
+    {
+      caption: "Choose which bank pays.",
+      duration: 1900,
+      onEnter: () => setTimeout(() => {
+        const row = document.getElementById("fsBankStarling");
+        if(row) row.classList.add("selected");
+      }, reduceMotion ? 30 : 650),
+      render: () => `
+        <div class="fs-topbar">CHOOSE BANK</div>
+        <div class="fs-bank-list">
+          <div class="fs-bank">Monzo<span class="fs-check-ic">✓</span></div>
+          <div class="fs-bank">Barclays<span class="fs-check-ic">✓</span></div>
+          <div class="fs-bank" id="fsBankStarling">Starling<span class="fs-check-ic">✓</span></div>
+          <div class="fs-bank">NatWest<span class="fs-check-ic">✓</span></div>
+        </div>`
+    },
+    {
+      caption: "Confirm with Face ID or your fingerprint.",
+      duration: 1900,
+      onEnter: () => setTimeout(() => {
+        const ring = document.getElementById("fsBioRing");
+        const label = document.getElementById("fsBioLabel");
+        if(ring){ ring.classList.remove("verifying"); ring.classList.add("verified"); ring.textContent = "✓"; }
+        if(label) label.textContent = "VERIFIED";
+      }, reduceMotion ? 30 : 1150),
+      render: () => `
+        <div class="fs-topbar">VERIFY</div>
+        <div class="fs-center">
+          <div class="fs-bio-ring verifying" id="fsBioRing">⦿</div>
+          <div class="fs-hint" id="fsBioLabel">FACE ID</div>
+        </div>`
+    },
+    {
+      caption: "Done — British Gas is paid.",
+      duration: 2200,
+      render: () => `
+        <div class="fs-center">
+          <div class="fs-check">✓</div>
+          <div class="fs-success-title">PAYMENT SENT</div>
+          <div class="fs-success-sub">British Gas · £84.20 · Today</div>
+        </div>`
+    }
+  ];
+
+  function animateAmount(){
+    const el = document.getElementById("fsAmtVal");
+    if(!el) return;
+    if(reduceMotion){ el.textContent = "84.20"; return; }
+    const target = 84.20;
+    const steps = 24;
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      el.textContent = (target * (n / steps)).toFixed(2);
+      if(n >= steps){ el.textContent = target.toFixed(2); clearInterval(iv); }
+    }, 30);
+  }
+
+  function buildDots(){
+    flowDotsWrap.innerHTML = flowScreens.map((_, i) =>
+      `<button type="button" class="flow-dot-btn" data-index="${i}" aria-label="Go to step ${i + 1}"></button>`
+    ).join("");
+    flowDotsWrap.querySelectorAll(".flow-dot-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        flowRunning = false;
+        clearTimeout(flowTimer);
+        goToScreen(Number(btn.dataset.index));
+        flowRunning = true;
+        scheduleNext();
+      });
+    });
+  }
+
+  function updateDots(){
+    flowDotsWrap.querySelectorAll(".flow-dot-btn").forEach((btn, i) => {
+      btn.classList.toggle("active", i === flowIndex);
+    });
+  }
+
+  function goToScreen(i){
+    flowIndex = i;
+    const screen = flowScreens[i];
+    flowScreen.innerHTML = screen.render();
+    flowCaption.textContent = screen.caption;
+    updateDots();
+    if(screen.onEnter && !reduceMotion) screen.onEnter();
+    if(screen.onEnter && reduceMotion) screen.onEnter();
+    if(screen.render().includes("fsPayBtn")){
+      setTimeout(() => {
+        const btn = document.getElementById("fsPayBtn");
+        if(btn) btn.classList.add("pressed");
+      }, reduceMotion ? 30 : screen.duration - 350);
+    }
+  }
+
+  function scheduleNext(){
+    clearTimeout(flowTimer);
+    flowTimer = setTimeout(() => {
+      if(flowIndex < flowScreens.length - 1){
+        goToScreen(flowIndex + 1);
+        scheduleNext();
+      } else {
+        flowRunning = false;
+      }
+    }, reduceMotion ? 200 : flowScreens[flowIndex].duration);
+  }
+
+  function playFlow(){
+    if(flowRunning) return;
+    flowRunning = true;
+    goToScreen(0);
+    scheduleNext();
+  }
+
+  buildDots();
+  goToScreen(0);
+
+  document.getElementById("replayFlow").addEventListener("click", () => {
+    flowRunning = false;
+    clearTimeout(flowTimer);
+    playFlow();
+  });
+
+  const howSection = document.getElementById("how-it-works");
+  const flowObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        playFlow();
+        flowObserver.disconnect();
+      }
+    });
+  }, { threshold: 0.4 });
+  flowObserver.observe(howSection);
+</script>
+
+</body>
+</html>
